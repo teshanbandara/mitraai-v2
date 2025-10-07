@@ -1,66 +1,54 @@
-// backend/api/chat.js
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
-import { checkFAQ } from './faqs.js';
+import { checkFAQ } from "./faqs.js";
+import OpenAI from "openai";
 
-dotenv.config();
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = OPENAI_KEY ? new OpenAI({ apiKey: OPENAI_KEY }) : null;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { message, sessionId } = req.body;
+  if (!message) return res.status(400).json({ error: "Message is required" });
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
-  // 1️⃣ Check FAQ first (FREE & instant)
+  // 1️⃣ FAQ check
   try {
     const faqAnswer = checkFAQ(message);
     if (faqAnswer) {
-      console.log('📋 FAQ matched:', faqAnswer);
-      return res.status(200).json({
-        message: faqAnswer,
-        sessionId,
-        isFAQ: true
-      });
+      return res.status(200).json({ message: faqAnswer, sessionId, isFAQ: true });
     }
   } catch (err) {
-    console.error('FAQ check failed:', err);
+    console.error("FAQ error:", err);
   }
 
-  // 2️⃣ If no FAQ match, call GPT (needs credits)
+  // 2️⃣ GPT fallback only if key exists
+  if (!openai) {
+    return res.status(200).json({
+      message: "FAQ not found and OpenAI key missing — cannot answer GPT questions.",
+      sessionId,
+      isFAQ: false
+    });
+  }
+
   try {
-    console.log('🤖 No FAQ match - using GPT');
-
-    const messages = [
-      { role: 'system', content: 'You are MitraAI, a helpful Sri Lankan assistant.' },
-      { role: 'user', content: message },
-    ];
-
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages,
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are MitraAI, a helpful Sri Lankan assistant." },
+        { role: "user", content: message }
+      ],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 800
     });
 
     const assistantMessage = completion.choices[0].message.content;
 
-    res.status(200).json({
-      message: assistantMessage,
-      sessionId,
-      isFAQ: false
-    });
+    res.status(200).json({ message: assistantMessage, sessionId, isFAQ: false });
 
-  } catch (error) {
-    console.error('GPT Error:', error.message);
-    res.status(500).json({ error: 'Internal Server Error' });
+  } catch (err) {
+    console.error("GPT error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }
