@@ -1,11 +1,15 @@
-export const faqs = [
-  {
-    keywords: ['hello', 'hi', 'hey', 'ayubowan', 'හෙලෝ', 'හායි', 'කොහොමද'],
-    answer: 'ආයුබෝවන්! Hello! I\'m MitraAI, your Sri Lankan friend. 🇱🇰\n\nමට ඔබට උදව් කරන්න පුළුවන්:\n✅ Passport applications\n✅ Pay bills (Dialog, Mobitel, CEB)\n✅ Government services (GN, DS office)\n✅ NIC & Driving License\n\nWhat do you need? / මොනවද ඕන?'
-  },
-  {
-    keywords: ['passport', 'apply passport', 'get passport', 'passport එක'],
-    answer: `**Sri Lankan Passport Application:**
+export function checkFAQ(message) {
+  const faqs = [
+    { q: "how to pay dialog bill", a: "You can pay your Dialog bill via Dialog self-care app or Dialog website." },
+    { q: "how to apply for passport", a: "You can apply for a passport at the Department of Immigration in Colombo or online via e-passport service." }
+    // Add more FAQ entries here
+  ];
+
+  const lowerMsg = message.toLowerCase();
+  const faqMatch = faqs.find(f => lowerMsg.includes(f.q.toLowerCase()));
+  return faqMatch ? faqMatch.a : null;
+}
+
 
 📝 **Online:**
 1. www.immigration.gov.lk
