@@ -1,7 +1,7 @@
 // backend/api/chat.js
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import { checkFAQ } from '../lib/faqs.js';
+import { checkFAQ } from './faqs.js';
 
 dotenv.config();
 
