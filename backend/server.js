@@ -14,6 +14,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
+});
+
+
 // Update CORS to allow your frontend domain
 app.use(cors({
   origin: [
@@ -28,7 +33,7 @@ const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI as
 
 CULTURAL COMMUNICATION STYLE:
 - Be warm, friendly, and respectful - Sri Lankans value personal connection
-- Use honorifics appropriately when speaking Sinhala (අයිය�?akka/මහත්තය�?මහත්මි�?
+- Use honorifics appropriately when speaking Sinhala (අයිය�?akka/මහත්තය�?මහත්මි�?
 - Be patient and thorough - direct "no" can be considered rude, so soften negative responses
 - Show empathy and understanding of local challenges (power cuts, economic issues, bureaucracy)
 - Use casual, conversational tone while maintaining respect
@@ -111,7 +116,7 @@ app.post('/api/chat', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('�?Error:', error.message);
+    console.error('�?Error:', error.message);
     
     // Handle OpenAI API errors (like no credits)
     if (error.message && error.message.includes('insufficient_quota')) {
@@ -119,10 +124,10 @@ app.post('/api/chat', async (req, res) => {
         message: `සමාවෙන්න! Sorry! I need OpenAI credits to answer this question.
 
 **Right now I can help with these (FREE):**
-�?Passport applications
-�?Pay bills (Dialog, Mobitel, CEB, Water)
-�?Government services (GN, DS office)
-�?NIC & Driving License
+�?Passport applications
+�?Pay bills (Dialog, Mobitel, CEB, Water)
+�?Government services (GN, DS office)
+�?NIC & Driving License
 
 Try asking: "how to pay dialog bill" or "passport application"
 
@@ -145,7 +150,7 @@ app.delete('/api/chat/:sessionId', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`�?MitraAI Server running on http://localhost:${PORT}`);
+  console.log(`�?MitraAI Server running on http://localhost:${PORT}`);
   console.log(`📋 FAQ System: Active (FREE answers)`);
   console.log(`🤖 GPT-4: Ready (needs credits)`);
 });
