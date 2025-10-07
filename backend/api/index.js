@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { checkFAQ } from './faqs.js';
+import { checkFAQ } from '../faqs.js';
 
 const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI assistant specifically designed to help Sri Lankan people with their daily problems and questions. ...`;
 
@@ -7,7 +7,7 @@ const chatSessions = new Map();
 
 // CORS helper
 function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://your-frontend.vercel.app'); // Replace with your frontend URL
+  res.setHeader('Access-Control-Allow-Origin', 'https://mitraai-tau.vercel.app/'); // Replace with your frontend URL
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
