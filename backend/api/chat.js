@@ -1,11 +1,25 @@
+// api/chat.js
 import { checkFAQ } from "./faqs.js";
 import OpenAI from "openai";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
-
 const openai = OPENAI_KEY ? new OpenAI({ apiKey: OPENAI_KEY }) : null;
 
+// Simple CORS headers
+function setCORS(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Or restrict to your frontend URL
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
 export default async function handler(req, res) {
+  setCORS(res);
+
+  // Handle preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -13,7 +27,7 @@ export default async function handler(req, res) {
   const { message, sessionId } = req.body;
   if (!message) return res.status(400).json({ error: "Message is required" });
 
-  // 1️⃣ FAQ check
+  // FAQ check
   try {
     const faqAnswer = checkFAQ(message);
     if (faqAnswer) {
@@ -23,7 +37,7 @@ export default async function handler(req, res) {
     console.error("FAQ error:", err);
   }
 
-  // 2️⃣ GPT fallback only if key exists
+  // GPT fallback
   if (!openai) {
     return res.status(200).json({
       message: "FAQ not found and OpenAI key missing — cannot answer GPT questions.",
