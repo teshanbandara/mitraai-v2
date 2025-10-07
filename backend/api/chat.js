@@ -1,6 +1,6 @@
-import OpenAI from "openai";
-import dotenv from "dotenv";
-import { checkFAQ } from "../lib/faqs.js";
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
+import { checkFAQ } from '../lib/faqs.js';
 
 dotenv.config();
 
@@ -8,40 +8,54 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are MitraAI... (keep your long prompt here)`;
-
-// Vercel-style function export
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
+  const { message, sessionId } = req.body;
 
-    const faq = checkFAQ(message);
-    if (faq) {
-      return res.status(200).json({ message: faq, isFAQ: true });
-    }
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  // 1️⃣ Check FAQ first (FREE & instant)
+  const faqAnswer = checkFAQ(message);
+  if (faqAnswer) {
+    console.log('📋 FAQ matched - returning instant answer (FREE)');
+    return res.status(200).json({
+      message: faqAnswer,
+      sessionId,
+      isFAQ: true
+    });
+  }
+
+  // 2️⃣ Only call OpenAI if no FAQ matched
+  try {
+    console.log('🤖 No FAQ match - using GPT');
+
+    const messages = [
+      { role: 'system', content: 'You are MitraAI, a helpful Sri Lankan assistant.' },
+      { role: 'user', content: message },
+    ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: message },
-      ],
-      max_tokens: 1000,
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 800,
     });
 
+    const assistantMessage = completion.choices[0].message.content;
+
     res.status(200).json({
-      message: completion.choices[0].message.content,
-      isFAQ: false,
+      message: assistantMessage,
+      sessionId,
+      isFAQ: false
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+
+  } catch (error) {
+    console.error('GPT Error:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
