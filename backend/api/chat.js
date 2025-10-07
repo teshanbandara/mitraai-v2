@@ -4,10 +4,11 @@ import OpenAI from "openai";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const openai = OPENAI_KEY ? new OpenAI({ apiKey: OPENAI_KEY }) : null;
+const FRONTEND_URL = "https://mitraai-tau.vercel.app";
 
 // Simple CORS headers
 function setCORS(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Or restrict to your frontend URL
+  res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL); // Or restrict to your frontend URL
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
