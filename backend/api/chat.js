@@ -1,23 +1,16 @@
 import { checkFAQ } from '../faqs.js';
 import OpenAI from 'openai';
 
-const SYSTEM_PROMPT = `You are MitraAI...`; // your SYSTEM_PROMPT
 const chatSessions = new Map();
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const SYSTEM_PROMPT = `Your SYSTEM_PROMPT here`;
 
 export default async function handler(req, res) {
-  const { method, url, body } = req;
+  const { method } = req;
 
-  // Health check
-  if (url === '/api/health' && method === 'GET') {
-    return res.status(200).json({ status: 'ok', message: 'MitraAI server is running' });
-  }
-
-  // Chat POST
-  if (url === '/api/chat' && method === 'POST') {
-    const { message, sessionId } = body;
-    if (!message) return res.status(400).json({ error: 'Message is required' });
+  if (method === 'POST') {
+    const { message, sessionId } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message required' });
 
     const faqAnswer = checkFAQ(message);
     if (faqAnswer) return res.json({ message: faqAnswer, sessionId, isFAQ: true });
@@ -41,19 +34,16 @@ export default async function handler(req, res) {
       if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
       chatSessions.set(sessionId, chatHistory);
 
-      return res.json({ message: assistantMessage, sessionId, isFAQ: false });
+      res.json({ message: assistantMessage, sessionId, isFAQ: false });
     } catch (err) {
       console.error(err.message);
-      return res.status(500).json({ error: 'Server error' });
+      res.status(500).json({ error: 'Server error' });
     }
-  }
-
-  // Delete chat session
-  if (url.startsWith('/api/chat/') && method === 'DELETE') {
-    const sessionId = url.split('/').pop();
+  } else if (method === 'DELETE') {
+    const sessionId = req.query.sessionId;
     chatSessions.delete(sessionId);
-    return res.json({ message: 'Chat session cleared' });
+    res.json({ message: 'Chat session cleared' });
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
   }
-
-  return res.status(404).json({ error: 'Route not found' });
 }
