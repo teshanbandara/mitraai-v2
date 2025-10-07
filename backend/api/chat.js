@@ -1,3 +1,4 @@
+// backend/api/chat.js
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { checkFAQ } from '../lib/faqs.js';
@@ -20,17 +21,21 @@ export default async function handler(req, res) {
   }
 
   // 1️⃣ Check FAQ first (FREE & instant)
-  const faqAnswer = checkFAQ(message);
-  if (faqAnswer) {
-    console.log('📋 FAQ matched - returning instant answer (FREE)');
-    return res.status(200).json({
-      message: faqAnswer,
-      sessionId,
-      isFAQ: true
-    });
+  try {
+    const faqAnswer = checkFAQ(message);
+    if (faqAnswer) {
+      console.log('📋 FAQ matched:', faqAnswer);
+      return res.status(200).json({
+        message: faqAnswer,
+        sessionId,
+        isFAQ: true
+      });
+    }
+  } catch (err) {
+    console.error('FAQ check failed:', err);
   }
 
-  // 2️⃣ Only call OpenAI if no FAQ matched
+  // 2️⃣ If no FAQ match, call GPT (needs credits)
   try {
     console.log('🤖 No FAQ match - using GPT');
 
