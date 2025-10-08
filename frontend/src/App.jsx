@@ -3,7 +3,8 @@ import { Send, Bot, User, Trash2, Download, Mic, MicOff } from 'lucide-react';
 import axios from 'axios';
 
 
-const API_URL = 'https://mitraai1.vercel.app/api';
+
+const API_URL = 'https://mitraai1.vercel.app/api/chat.js';
 
 function App() {
   const [messages, setMessages] = useState([
