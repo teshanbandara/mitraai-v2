@@ -1,63 +1,29 @@
 import OpenAI from 'openai';
 import { checkFAQ } from '../lib/faqs.js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize OpenAI (only if API key exists)
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+}
 
-const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI assistant specifically designed to help Sri Lankan people with their daily problems and questions. "Mitra" means "friend" in Sinhala, and that's exactly what you are - a trusted friend to every Sri Lankan.
+const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI assistant specifically designed to help Sri Lankan people with their daily problems and questions. "Mitra" means "friend" in Sinhala.
 
-CULTURAL COMMUNICATION STYLE:
-- Be warm, friendly, and respectful - Sri Lankans value personal connection
-- Use honorifics appropriately when speaking Sinhala (අයියා/akka/මහත්තයා/මහත්මිය)
-- Be patient and thorough - direct "no" can be considered rude, so soften negative responses
-- Show empathy and understanding of local challenges (power cuts, economic issues, bureaucracy)
-- Use casual, conversational tone while maintaining respect
-
-LANGUAGE HANDLING:
-- Respond in the same language the user writes in (Sinhala or English)
-- If user mixes languages (common in Sri Lanka), mirror that style
-- For Sinhala responses, use proper Sinhala script (not transliteration)
-
-SRI LANKAN CONTEXT AWARENESS:
-- Understand local references: Colombo, Kandy, Galle, Sri Lankan cuisine, cricket
-- Be aware of common issues: visa problems, government services, electricity bills, transport
-- Know about local services: Dialog, Mobitel, SLT, People's Bank, Bank of Ceylon
-- Understand family structures and Sri Lankan customs
-
-PROBLEM-SOLVING APPROACH:
-- Ask clarifying questions if needed
-- Provide step-by-step guidance
-- Offer multiple solutions when possible
-- Include practical tips that work in Sri Lankan context
-
-Remember: You're MitraAI, a knowledgeable Sri Lankan friend who wants to genuinely help.`;
+Be warm, friendly, respectful and helpful. Respond in the same language the user writes in (Sinhala or English). Understand Sri Lankan context, local services, and culture.`;
 
 // In-memory session storage
 const chatSessions = new Map();
 
 export default async function handler(req, res) {
-  // CORS headers
-  const allowedOrigins = [
-    'https://mitraai-tau.vercel.app',  // Add your ACTUAL frontend URL here
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  
+  // CORS headers - MUST be first!
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Authorization');
 
-  // Rest of the code...
-
-  // Handle preflight OPTIONS request
+  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -70,16 +36,16 @@ export default async function handler(req, res) {
   try {
     const { message, sessionId } = req.body;
 
+    console.log('📨 Received:', message);
+
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    console.log('📨 Received message:', message);
-
-    // STEP 1: Check FAQs first (FREE & INSTANT)
+    // ✅ STEP 1: Check FAQs FIRST (highest priority!)
     const faqAnswer = checkFAQ(message);
     if (faqAnswer) {
-      console.log('📋 FAQ matched - returning instant answer');
+      console.log('✅ FAQ MATCHED! Returning instant answer');
       return res.status(200).json({
         message: faqAnswer,
         sessionId: sessionId || 'default',
@@ -87,11 +53,38 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('🤖 No FAQ match - using GPT-4');
+    console.log('ℹ️ No FAQ match found');
 
-    // STEP 2: No FAQ match - use GPT-4
+    // ✅ STEP 2: If no FAQ, check if OpenAI is available
+    if (!openai) {
+      console.log('⚠️ OpenAI not configured');
+      return res.status(200).json({
+        message: `හායි! මට මේ ප්‍රශ්නය හරියටම තේරුණේ නෑ. / Hi! I don't have a premade answer for this yet.
+
+**I can help with these (FREE & INSTANT):**
+
+✅ "hello" - Greetings
+✅ "passport" - Passport applications
+✅ "dialog bill" - Pay Dialog bill
+✅ "electricity bill" - Pay CEB/LECO bill
+✅ "mobitel bill" - Pay Mobitel bill
+✅ "grama niladhari" - GN services
+✅ "ds office" - DS office services
+✅ "nic" - National ID card
+✅ "driving license" - Get driving license
+✅ "water bill" - Pay water bill
+
+Try asking about these! / මේවා ගැන අහන්න!`,
+        sessionId: sessionId || 'default',
+        isFAQ: false
+      });
+    }
+
+    // ✅ STEP 3: Use OpenAI for non-FAQ questions
+    console.log('🤖 Using OpenAI...');
+
     let chatHistory = chatSessions.get(sessionId) || [];
-
+    
     chatHistory.push({
       role: 'user',
       content: message
@@ -99,14 +92,14 @@ export default async function handler(req, res) {
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      ...chatHistory
+      ...chatHistory.slice(-10) // Keep last 10 messages only
     ];
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: messages,
       temperature: 0.7,
-      max_tokens: 1000
+      max_tokens: 800
     });
 
     const assistantMessage = completion.choices[0].message.content;
@@ -122,7 +115,7 @@ export default async function handler(req, res) {
     }
     chatSessions.set(sessionId, chatHistory);
 
-    console.log('✅ Response sent');
+    console.log('✅ OpenAI response sent');
 
     return res.status(200).json({
       message: assistantMessage,
@@ -131,20 +124,20 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ ERROR:', error.message);
     
-    // Handle OpenAI API errors (like no credits)
-    if (error.message && (error.message.includes('insufficient_quota') || error.message.includes('quota'))) {
+    // Handle specific errors
+    if (error.message && (error.message.includes('insufficient_quota') || error.message.includes('quota') || error.message.includes('billing'))) {
       return res.status(200).json({
-        message: `සමාවෙන්න! Sorry! I need OpenAI credits to answer this question.
+        message: `සමාවෙන්න! OpenAI credits අවශ්‍යයි මේ ප්‍රශ්නයට.
 
-**Right now I can help with these (FREE):**
+**But I can help with these (FREE):**
+
 ✅ "hello" - Greetings
-✅ "passport" - Passport applications
-✅ "dialog bill" - Pay Dialog bill
-✅ "electricity bill" - Pay CEB/LECO bill
+✅ "passport" - How to get passport
+✅ "dialog bill" - Pay Dialog
+✅ "electricity bill" - Pay CEB/LECO
 ✅ "grama niladhari" - GN services
-✅ "mobitel bill" - Pay Mobitel bill
 
 Try one of these! / මේවා try කරන්න!`,
         sessionId: req.body.sessionId || 'default',
@@ -152,9 +145,10 @@ Try one of these! / මේවා try කරන්න!`,
       });
     }
 
+    // Generic error
     return res.status(500).json({
-      error: 'An error occurred while processing your request',
-      details: error.message
+      error: 'Server error',
+      message: error.message
     });
   }
 }
