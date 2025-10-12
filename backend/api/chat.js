@@ -5,43 +5,41 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI assistant specifically designed to help Sri Lankan people with their daily problems and questions. "Mitra" means "friend" in Sinhala, and that's exactly what you are - a trusted friend to every Sri Lankan. You should:
+const SYSTEM_PROMPT = `You are MitraAI (මිත්‍ර AI), a friendly AI assistant specifically designed to help Sri Lankan people with their daily problems and questions. "Mitra" means "friend" in Sinhala, and that's exactly what you are - a trusted friend to every Sri Lankan.
 
 CULTURAL COMMUNICATION STYLE:
 - Be warm, friendly, and respectful - Sri Lankans value personal connection
 - Use honorifics appropriately when speaking Sinhala (අයියා/akka/මහත්තයා/මහත්මිය)
-- Be patient and thorough
-- Show empathy and understanding of local challenges
+- Be patient and thorough - direct "no" can be considered rude, so soften negative responses
+- Show empathy and understanding of local challenges (power cuts, economic issues, bureaucracy)
+- Use casual, conversational tone while maintaining respect
 
 LANGUAGE HANDLING:
 - Respond in the same language the user writes in (Sinhala or English)
 - If user mixes languages (common in Sri Lanka), mirror that style
+- For Sinhala responses, use proper Sinhala script (not transliteration)
 
 SRI LANKAN CONTEXT AWARENESS:
-- Understand local references: Colombo, Kandy, Galle
-- Be aware of common issues: visa problems, government services, electricity bills
-- Know about local services: Dialog, Mobitel, SLT
+- Understand local references: Colombo, Kandy, Galle, Sri Lankan cuisine, cricket
+- Be aware of common issues: visa problems, government services, electricity bills, transport
+- Know about local services: Dialog, Mobitel, SLT, People's Bank, Bank of Ceylon
+- Understand family structures and Sri Lankan customs
+
+PROBLEM-SOLVING APPROACH:
+- Ask clarifying questions if needed
+- Provide step-by-step guidance
+- Offer multiple solutions when possible
+- Include practical tips that work in Sri Lankan context
 
 Remember: You're MitraAI, a knowledgeable Sri Lankan friend who wants to genuinely help.`;
 
+// In-memory session storage
 const chatSessions = new Map();
 
 export default async function handler(req, res) {
-  // ⚠️ CRITICAL: Set CORS headers FIRST, before anything else
-  const allowedOrigins = [
-    'https://mitraai-tau.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  
+  // CORS headers - MUST be first!
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Authorization');
 
@@ -50,7 +48,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Only allow POST for chat
+  // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -62,9 +60,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Check FAQs first
+    console.log('📨 Received message:', message);
+
+    // STEP 1: Check FAQs first (FREE & INSTANT)
     const faqAnswer = checkFAQ(message);
     if (faqAnswer) {
+      console.log('📋 FAQ matched - returning instant answer');
       return res.status(200).json({
         message: faqAnswer,
         sessionId: sessionId || 'default',
@@ -72,7 +73,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // No FAQ match - use GPT-4
+    console.log('🤖 No FAQ match - using GPT-4');
+
+    // STEP 2: No FAQ match - use GPT-4
     let chatHistory = chatSessions.get(sessionId) || [];
 
     chatHistory.push({
@@ -99,10 +102,13 @@ export default async function handler(req, res) {
       content: assistantMessage
     });
 
+    // Keep only last 20 messages
     if (chatHistory.length > 20) {
       chatHistory = chatHistory.slice(-20);
     }
     chatSessions.set(sessionId, chatHistory);
+
+    console.log('✅ Response sent');
 
     return res.status(200).json({
       message: assistantMessage,
@@ -111,20 +117,23 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('❌ Error:', error.message);
     
-    if (error.message && error.message.includes('insufficient_quota')) {
+    // Handle OpenAI API errors (like no credits)
+    if (error.message && (error.message.includes('insufficient_quota') || error.message.includes('quota'))) {
       return res.status(200).json({
         message: `සමාවෙන්න! Sorry! I need OpenAI credits to answer this question.
 
 **Right now I can help with these (FREE):**
-✅ Passport applications
-✅ Pay bills (Dialog, Mobitel, CEB, Water)
-✅ Government services (GN, DS office)
-✅ NIC & Driving License
+✅ "hello" - Greetings
+✅ "passport" - Passport applications
+✅ "dialog bill" - Pay Dialog bill
+✅ "electricity bill" - Pay CEB/LECO bill
+✅ "grama niladhari" - GN services
+✅ "mobitel bill" - Pay Mobitel bill
 
-Try asking: "how to pay dialog bill" or "passport application"`,
-        sessionId: sessionId || 'default',
+Try one of these! / මේවා try කරන්න!`,
+        sessionId: req.body.sessionId || 'default',
         isFAQ: false
       });
     }

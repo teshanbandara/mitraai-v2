@@ -8,18 +8,40 @@
   box-sizing: border-box;
 }
 
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans Sinhala', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes fadeIn {
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #c7d2fe, #a5b4fc);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #a5b4fc, #818cf8);
+}
+
+/* Smooth slide up animation */
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -27,23 +49,61 @@ body {
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-::-webkit-scrollbar {
-  width: 8px;
+/* Smooth focus styles */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 3px;
+  transition: outline-offset 0.2s ease;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #fb923c;
-  border-radius: 4px;
+/* Better text rendering */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
+/* Smooth transitions everywhere */
+* {
+  transition-property: color, background-color, border-color, transform, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* No transitions on animations */
+.animate-bounce,
+.animate-slideUp {
+  transition: none;
+}
+
+/* Prevent text selection on UI elements */
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Smooth hover effects */
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Disabled button styles */
+button:disabled {
+  transform: none;
+  cursor: not-allowed;
+  opacity: 0.6;
 }

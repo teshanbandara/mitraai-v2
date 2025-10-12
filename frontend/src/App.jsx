@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Trash2, Download, Mic, MicOff } from 'lucide-react';
+import { Send, MessageCircle, Trash2, Mic, MicOff } from 'lucide-react';
 import axios from 'axios';
 
-
-
-const API_URL = 'https://mitraai1.vercel.app/api/chat.js';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 function App() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'ආයුබෝවන්! I\'m MitraAI, your Sri Lankan friend. How can I help you today? / මට ඔබට අද කොහොමද උදව් කරන්න පුළුවන්?'
+      content: 'Hello! I\'m MitraAI. How can I help you today?\n\nහායි! මම MitraAI. ඔබට උදව්වක් අවශ්‍යද?'
     }
   ]);
   const [input, setInput] = useState('');
@@ -57,12 +55,13 @@ function App() {
 
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
+    const messageText = input;
     setInput('');
     setIsLoading(true);
 
     try {
       const response = await axios.post(`${API_URL}/chat`, {
-        message: input,
+        message: messageText,
         sessionId: sessionId
       });
 
@@ -77,7 +76,7 @@ function App() {
       console.error('Error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Sorry, there was an error. Please try again. / සමාවෙන්න, දෝෂයක් ඇතිවුණා. කරුණාකරලා නැවත try කරන්න.'
+        content: 'Sorry, there was an error. Please try again.\n\nසමාවෙන්න, දෝෂයක් ඇතිවුණා.'
       }]);
     } finally {
       setIsLoading(false);
@@ -97,25 +96,12 @@ function App() {
       setMessages([
         {
           role: 'assistant',
-          content: 'ආයුබෝවන්! I\'m MitraAI, your Sri Lankan friend. How can I help you today? / මට ඔබට අද කොහොමද උදව් කරන්න පුළුවන්?'
+          content: 'Hello! I\'m MitraAI. How can I help you today?\n\nහායි! මම MitraAI. ඔබට උදව්වක් අවශ්‍යද?'
         }
       ]);
     } catch (error) {
       console.error('Error clearing chat:', error);
     }
-  };
-
-  const exportChat = () => {
-    const chatText = messages
-      .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-      .join('\n\n');
-    
-    const blob = new Blob([chatText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mitraai-chat-${new Date().toISOString()}.txt`;
-    a.click();
   };
 
   const toggleVoiceInput = () => {
@@ -129,119 +115,97 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
-      <div className="max-w-5xl mx-auto h-screen flex flex-col">
-        <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-orange-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-lg">
-                <Bot className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">MitraAI</h1>
-                <p className="text-sm text-gray-600">ඔබගේ මිත්‍රයා | Your Sri Lankan Friend 🇱🇰</p>
-              </div>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 px-4 sm:px-6 py-4 flex-shrink-0 shadow-sm">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
+              <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={exportChat}
-                className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                title="Export chat"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-              <button
-                onClick={clearChat}
-                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                title="Clear chat"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+            <div>
+              <h1 className="text-xl font-medium text-slate-800">MitraAI</h1>
+              <p className="text-xs text-slate-500 hidden sm:block">Your calm assistant</p>
             </div>
           </div>
+          
+          <button
+            onClick={clearChat}
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 rounded-xl transition-all duration-200"
+            title="Clear chat"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
+      </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-8">
+        <div className="max-w-3xl mx-auto space-y-6">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-slideUp`}
             >
               <div
-                className={`flex items-start space-x-3 max-w-[85%] ${
-                  message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                className={`max-w-[85%] sm:max-w-[75%] rounded-3xl px-5 py-3.5 shadow-sm transition-all duration-200 ${
+                  message.role === 'user'
+                    ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-indigo-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-slate-700 border border-slate-200/50 shadow-slate-200/50'
                 }`}
               >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md ${
-                    message.role === 'user' 
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
-                      : 'bg-gradient-to-br from-orange-500 to-red-500'
-                  }`}
-                >
-                  {message.role === 'user' ? (
-                    <User className="w-5 h-5 text-white" />
-                  ) : (
-                    <Bot className="w-5 h-5 text-white" />
-                  )}
-                </div>
-                <div
-                  className={`rounded-2xl px-5 py-3 shadow-md ${
-                    message.role === 'user'
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                      : 'bg-white text-gray-800 border border-gray-100'
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                </div>
+                <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
               </div>
             </div>
           ))}
+          
           {isLoading && (
-            <div className="flex justify-start animate-fadeIn">
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-md">
-                  <Bot className="w-5 h-5 text-white" />
-                </div>
-                <div className="bg-white rounded-2xl px-5 py-3 shadow-md border border-gray-100">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
+            <div className="flex justify-start animate-slideUp">
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl px-5 py-3.5 border border-slate-200/50 shadow-sm shadow-slate-200/50">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        <div className="bg-white/90 backdrop-blur-sm border-t border-orange-200 p-4 shadow-lg">
-          <div className="flex space-x-3">
+      {/* Input */}
+      <div className="bg-white/80 backdrop-blur-md border-t border-slate-200/50 px-4 sm:px-6 py-5 flex-shrink-0 shadow-lg">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center space-x-3">
             <button
               onClick={toggleVoiceInput}
-              className={`p-3 rounded-full transition-all ${
+              className={`flex-shrink-0 p-3 rounded-2xl transition-all duration-300 ${
                 isListening 
-                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                  ? 'bg-gradient-to-br from-red-400 to-pink-400 text-white shadow-lg shadow-red-200/50 scale-105' 
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-105'
               }`}
-              title={isListening ? 'Stop recording' : 'Voice input'}
+              title={isListening ? 'Stop' : 'Voice'}
             >
               {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
+
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type your message... / ඔබේ message එක type කරන්න..."
-              className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-full focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+              placeholder="Type your message..."
+              className="flex-1 px-5 py-3.5 bg-white/90 border border-slate-200/50 rounded-2xl focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300 outline-none text-sm sm:text-base text-slate-700 placeholder-slate-400 transition-all duration-200 shadow-sm"
               disabled={isLoading}
             />
+
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !input.trim()}
-              className="bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-full p-3 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+              className="flex-shrink-0 p-3 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white rounded-2xl transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:scale-105 hover:shadow-xl disabled:shadow-none disabled:scale-100"
             >
               <Send className="w-5 h-5" />
             </button>
